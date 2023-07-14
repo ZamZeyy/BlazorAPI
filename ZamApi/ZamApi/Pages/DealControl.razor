@@ -1,0 +1,116 @@
+﻿@page "/dealcontrol"
+@using ZamApi.Models
+@using System.Text.Json;
+@inject NavigationManager NavigationManager;
+@inject IJSRuntime JsRuntime;
+
+<PageTitle>Game Deals</PageTitle>
+
+<h1>Game Deal</h1>
+
+@if (newDeal == null)
+{
+    <p><em>Add new deal.</em></p>
+}
+else
+{
+    <div class="deal">
+        <h2>Title: @newDeal.title</h2>
+        <h2>Normal Price: @newDeal.normalPrice</h2>
+        <h2>Sale Price: @newDeal.salePrice</h2>
+
+
+    </div>
+}
+<div>
+    
+        <label for="Title">Title:</label>
+        <input type="text" id="Title" name="Title" @bind = "Title"><br><br>
+        <label for="Price">Price:</label>
+        <input type="text" id="Price" name="Price" @bind="Price"><br><br>
+        <label for="SalePrice">Sale Price:</label>
+        <input type="text" id="Sale Price" name="Sale Price" @bind="SalePrice"><br><br>
+        <button @onclick="() => submitForm()" >Submit
+        </button>
+        <button @onclick="() => importGame()" >Import</button>
+    
+</div>
+
+<style>
+    .deal
+{
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        margin: 10px;
+        padding: 10px;
+        border: 1px solid black;
+    }
+</style>
+
+
+
+
+@code {
+    private string Title;
+    private string Price;
+    private string SalePrice;
+
+    private GameDeal? newDeal = null;
+
+
+
+    static readonly HttpClient client = new HttpClient();
+
+    private async Task importGame()
+    {
+        string responseBody = await HttpsReq("https://localhost:7067/api/getgame/1");
+        newDeal = JsonSerializer.Deserialize<GameDeal>(responseBody);
+        
+    }
+
+
+    private async Task submitForm()
+    {
+        Console.WriteLine("Submitted");
+
+        newDeal = new GameDeal()
+            {
+                title = Title,
+                normalPrice = Price,
+                salePrice = SalePrice
+
+            };
+        Console.WriteLine(newDeal.title);
+        Console.WriteLine(newDeal.normalPrice);
+        Console.WriteLine(newDeal.salePrice);
+
+        
+    }
+
+    private async Task redirectToSite(string url)
+    {
+        await JsRuntime.InvokeVoidAsync("open", url, "_blank");
+    }
+
+
+
+    static async Task<string> HttpsReq(string gmAPI)
+    {
+        try
+        {
+            using HttpResponseMessage response = await client.GetAsync(gmAPI);
+            response.EnsureSuccessStatusCode();
+            string responseBody = await response.Content.ReadAsStringAsync();
+
+            return responseBody;
+        }
+        catch (HttpRequestException e)
+        {
+            Console.WriteLine("\nException Caught!");
+            Console.WriteLine("Message :{0} ", e.Message);
+            return "Error";
+        }
+    }
+}

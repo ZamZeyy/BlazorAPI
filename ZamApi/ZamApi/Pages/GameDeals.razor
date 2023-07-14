@@ -1,0 +1,132 @@
+﻿@page "/gamedeals"
+@using ZamApi.Models
+@using System.Text.Json;
+@inject NavigationManager NavigationManager;
+@inject IJSRuntime JsRuntime;
+
+<PageTitle>Game Deals</PageTitle>
+
+<h1>Game Deals</h1>
+
+@if (gameDeals == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Game Title</th>
+                <th>Normal Price</th>
+                <th>Sale Price</th>
+                <th>Savings</th>
+                <th>Metacritic Score </th>
+                <th>Steam Rating Percent</th>
+                <th>Deal Rating</th>
+                <th>Game cover</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var game in gameDeals)
+            {
+                <tr @onclick='() => redirectToSite($"https://www.cheapshark.com/redirect?dealID={game.dealID}")'>
+                    <td>@game.title</td>
+                    <td>@game.normalPrice</td>
+                    <td>@game.salePrice</td>
+                    <td>@game.savings</td>
+                    <td>@game.metacriticScore</td>
+                    <td>@game.steamRatingPercent</td>
+                    <td>@game.dealRating</td>
+                    <td><img class = "IMGLIMIT"  src="@game.thumb"> </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+    <div class="center">
+    <button @onclick="PreviousPage" disabled="@IsFirstPage">Previous Page</button>
+    <span>Page @currentPage</span>
+    <button @onclick="NextPage">Next Page</button>
+    </div>
+}
+
+
+
+
+<style>
+.center {
+  margin: auto;
+  width: 50%;
+  padding: 10px;
+  text-align: center;
+}
+
+.IMGLIMIT
+{
+    max-width: 100px;
+    max-height: 100px;
+}
+</style>
+
+
+
+@code {
+    private int currentPage = 1;
+    private int dealsPerPage = 10;
+    private bool IsFirstPage => currentPage == 1;
+
+
+
+    private async Task redirectToSite(string url)
+    {
+        await JsRuntime.InvokeVoidAsync("open", url, "_blank");
+    }
+
+    private List<GameDeal> gameDeals = new List<GameDeal>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDeals(currentPage, dealsPerPage);
+    }
+
+    private async Task LoadDeals(int page, int pageSize)
+    {
+        string response = await HttpsReq($"https://www.cheapshark.com/api/1.0/deals?pageSize={pageSize}&pageNumber={page}");
+        gameDeals = JsonSerializer.Deserialize<List<GameDeal>>(response);
+    }
+
+    private async Task NextPage()
+    {
+        currentPage++;
+        await LoadDeals(currentPage, dealsPerPage);
+    }
+
+    private async Task PreviousPage()
+    {
+        if (currentPage > 1)
+        {
+            currentPage--;
+            await LoadDeals(currentPage, dealsPerPage);
+        }
+    }
+
+    static readonly HttpClient client = new HttpClient();
+
+    static async Task<string> HttpsReq(string gmAPI)
+    {
+        try
+        {
+            using HttpResponseMessage response = await client.GetAsync(gmAPI);
+            response.EnsureSuccessStatusCode();
+            string responseBody = await response.Content.ReadAsStringAsync();
+
+            return responseBody;
+        }
+        catch (HttpRequestException e)
+        {
+            Console.WriteLine("\nException Caught!");
+            Console.WriteLine("Message :{0} ", e.Message);
+            return "Error";
+        }
+    }
+}
